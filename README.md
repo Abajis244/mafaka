@@ -2,8 +2,8 @@
 
 **Live prototype:** https://mafaka-livid.vercel.app
 
-A consent architecture prototype for sensitive support cases. In Yoruba,
-*MAFAKA* means a place of refuge.
+A consent architecture prototype for sensitive support cases. *MAFAKA*
+is a Hausa word meaning a place of refuge.
 
 > **A case is not an access permission.**
 
