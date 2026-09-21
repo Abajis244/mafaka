@@ -77,7 +77,7 @@ const STRINGS = {
     incident: "Tell us what happened.",
     incidentSub: "In your own words. Take your time.",
     incidentNudge: "Keep identifying information out of this description. You can add identity details separately.",
-    identifyingWarning: "Your description may contain a name, address, or contact detail. Consider removing details that could identify you before continuing.",
+    identifyingWarning: "Your description may contain a phone number or email address. Consider removing it before continuing.",
     incidentPlaceholder: "What happened? When and where did it occur?",
 
     controlShare: "You control what you share",
@@ -299,7 +299,7 @@ const STRINGS = {
     incident: "Sọ ohun tó ṣẹlẹ̀ fún wa.",
     incidentSub: "Sọ ọ́ ní ọ̀rọ̀ ara rẹ. Má ṣe yára.",
     incidentNudge: "Má ṣe fi ìwífún tó lè fi mọ ẹni tí o jẹ́ síhìn-ín. O lè fi ìwífún ìdánimọ̀ sílẹ̀ ní apá mìíràn.",
-    identifyingWarning: "Ó dàbí pé àlàyé rẹ lè ní orúkọ, àdírẹ́sì, tàbí ìwífún ìbánisọ̀rọ̀. Ronú láti yọ ohun tó lè fi mọ ẹni tí o jẹ́ kúrò kí o tó tẹ̀síwájú.",
+    identifyingWarning: "Ó dàbí pé àlàyé rẹ lè ní nọ́ńbà fóònù tàbí àdírẹ́sẹ̀ imeèlì. Ronú láti yọ ọ́ kúrò kí o tó tẹ̀síwájú.",
     incidentPlaceholder: "Kí ló ṣẹlẹ̀? Ìgbà wo ni ó ṣẹlẹ̀, àti ibo ni ó ti ṣẹlẹ̀?",
 
     controlShare: "Ìwọ ló ń pinnu ohun tí o fẹ́ pín.",
@@ -602,9 +602,17 @@ const enforceResponderAccess = (caseData) => {
     email: !!safeData.identity.email
   };
 
-  if (!safeData.permissions.name?.granted) safeData.identity.name = null;
-  if (!safeData.permissions.phone?.granted) safeData.identity.phone = null;
-  if (!safeData.permissions.email?.granted) safeData.identity.email = null;
+  delete safeData.recoveryKey;
+
+  const now = Date.now();
+  ['name', 'phone', 'email'].forEach((k) => {
+    const p = safeData.permissions[k];
+    const live = p?.granted && p.expiresAt && new Date(p.expiresAt).getTime() > now;
+    if (!live) {
+      safeData.identity[k] = null;
+      if (p) p.granted = false;
+    }
+  });
 
   return safeData;
 };
@@ -750,7 +758,7 @@ const IntakeFlow = ({ onComplete, t }) => {
   const updateId = (k, v) => setData(p => ({ ...p, identity: { ...p.identity, [k]: v } }));
 
   const checkIdentifyingInfo = (text) => {
-    const hasPhone = /[\d\-\+\s]{8,}/.test(text);
+    const hasPhone = /\+?\d[\d\s-]{6,}\d/.test(text);
     const hasEmail = /@/.test(text);
     setIdentifyingWarning(hasPhone || hasEmail);
   };
@@ -973,16 +981,16 @@ const IntakeFlow = ({ onComplete, t }) => {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">{t.nameLabel} <span className="text-stone-400 font-normal">{t.optional}</span></label>
-                <input type="text" value={data.identity.name} onChange={(e) => updateId('name', e.target.value)} className="w-full p-3.5 border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#3D5A4C] focus:border-[#3D5A4C] outline-none transition-colors" />
+                <label htmlFor="id_name" className="block text-sm font-medium text-stone-700 mb-1.5">{t.nameLabel} <span className="text-stone-400 font-normal">{t.optional}</span></label>
+                <input id="id_name" type="text" value={data.identity.name} onChange={(e) => updateId('name', e.target.value)} className="w-full p-3.5 border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#3D5A4C] focus:border-[#3D5A4C] outline-none transition-colors" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">{t.phoneLabel} <span className="text-stone-400 font-normal">{t.optional}</span></label>
-                <input type="tel" value={data.identity.phone} onChange={(e) => updateId('phone', e.target.value)} className="w-full p-3.5 border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#3D5A4C] focus:border-[#3D5A4C] outline-none transition-colors" />
+                <label htmlFor="id_phone" className="block text-sm font-medium text-stone-700 mb-1.5">{t.phoneLabel} <span className="text-stone-400 font-normal">{t.optional}</span></label>
+                <input id="id_phone" type="tel" value={data.identity.phone} onChange={(e) => updateId('phone', e.target.value)} className="w-full p-3.5 border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#3D5A4C] focus:border-[#3D5A4C] outline-none transition-colors" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">{t.emailLabel} <span className="text-stone-400 font-normal">{t.optional}</span></label>
-                <input type="email" value={data.identity.email} onChange={(e) => updateId('email', e.target.value)} className="w-full p-3.5 border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#3D5A4C] focus:border-[#3D5A4C] outline-none transition-colors" />
+                <label htmlFor="id_email" className="block text-sm font-medium text-stone-700 mb-1.5">{t.emailLabel} <span className="text-stone-400 font-normal">{t.optional}</span></label>
+                <input id="id_email" type="email" value={data.identity.email} onChange={(e) => updateId('email', e.target.value)} className="w-full p-3.5 border border-stone-200 rounded-xl focus:ring-1 focus:ring-[#3D5A4C] focus:border-[#3D5A4C] outline-none transition-colors" />
               </div>
             </div>
             <div className="flex justify-between pt-6 mt-auto">
@@ -1196,8 +1204,9 @@ const SurvivorDashboard = ({ caseData, updateCase, onNavigate, onDelete, t, lang
     if (!hasData) return null;
 
     const perm = caseData.permissions[internalKey];
+    const live = perm.granted && perm.expiresAt && new Date(perm.expiresAt).getTime() > Date.now();
 
-    if (perm.granted) {
+    if (live) {
       return (
         <div className="bg-[#3D5A4C]/5 border border-[#3D5A4C]/20 rounded-xl p-4 fade-in">
           <div className="flex justify-between items-start mb-3">
@@ -1220,7 +1229,8 @@ const SurvivorDashboard = ({ caseData, updateCase, onNavigate, onDelete, t, lang
       );
     }
 
-    if (perm.revokedAt) {
+    if (perm.revokedAt || (perm.granted && !live)) {
+      const statusText = perm.revokedAt ? `${t.revoked} ${formatTime(perm.revokedAt, lang)}` : `${t.expires} ${formatTime(perm.expiresAt, lang)}`;
       return (
         <div className="bg-stone-100 border border-stone-200 rounded-xl p-4 opacity-80 fade-in">
           <div className="flex justify-between items-center mb-1">
@@ -1231,7 +1241,7 @@ const SurvivorDashboard = ({ caseData, updateCase, onNavigate, onDelete, t, lang
           <div className="text-xs text-stone-400 font-mono mt-1">***</div>
           <div className="mt-3 pt-3 border-t border-stone-200/80 text-xs text-stone-500 space-y-1">
             <div>{t.stopSharingNote}</div>
-            <span className="text-xs text-stone-500 font-normal">{t.revoked} {formatTime(perm.revokedAt, lang)}</span>
+            <span className="text-xs text-stone-500 font-normal">{statusText}</span>
           </div>
         </div>
       );
@@ -1389,7 +1399,6 @@ const ResponderLogin = ({ onLogin, onNavigate }) => {
   const [org, setOrg] = useState('SafeHouse Lagos');
   return (
     <div className="min-h-screen bg-[#1A1A1A] flex flex-col items-center justify-center px-5 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none" />
       <div className="max-w-md w-full bg-[#242424] p-8 md:p-10 rounded-[2rem] border border-stone-800 shadow-2xl relative z-10 fade-in">
         <div className="flex items-center gap-2.5 mb-8">
           <Shield className="w-5 h-5 text-stone-400" strokeWidth={1.75} />
@@ -1424,8 +1433,8 @@ const ResponderLogin = ({ onLogin, onNavigate }) => {
 
 const ResponderDashboard = ({ cases, activeOrg, onOpenCase, onLogout }) => {
   const orgCases = Object.values(cases).filter(c => c.org === activeOrg);
-  const urgent = orgCases.filter(c => c.danger === 'Yes' || c.dangerNearby === 'Yes').sort((a,b) => b.id.localeCompare(a.id));
-  const rest = orgCases.filter(c => c.danger !== 'Yes' && c.dangerNearby !== 'Yes').sort((a,b) => b.id.localeCompare(a.id));
+  const urgent = orgCases.filter(c => c.danger === 'Yes' || c.danger === 'Not sure' || c.dangerNearby === 'Yes').sort((a,b) => b.id.localeCompare(a.id));
+  const rest = orgCases.filter(c => !(c.danger === 'Yes' || c.danger === 'Not sure' || c.dangerNearby === 'Yes')).sort((a,b) => b.id.localeCompare(a.id));
   const sortedCases = [...urgent, ...rest];
 
   return (
@@ -1447,7 +1456,7 @@ const ResponderDashboard = ({ cases, activeOrg, onOpenCase, onLogout }) => {
         ) : (
           <div className="grid gap-4">
             {sortedCases.map(c => {
-              const isUrgent = c.danger === 'Yes' || c.dangerNearby === 'Yes';
+              const isUrgent = c.danger === 'Yes' || c.danger === 'Not sure' || c.dangerNearby === 'Yes';
               return (
                 <div key={c.id} onClick={() => onOpenCase(c.id)} className="bg-[#242424] border border-stone-800 hover:border-stone-600 p-5 rounded-xl flex items-center justify-between cursor-pointer transition-colors group">
                   <div className="flex items-center gap-5">
@@ -1483,7 +1492,7 @@ const ResponderCaseView = ({ caseData, updateCase, onBack }) => {
 
   if (!caseData) return null;
 
-  const isUrgent = caseData.danger === 'Yes' || caseData.dangerNearby === 'Yes';
+  const isUrgent = caseData.danger === 'Yes' || caseData.danger === 'Not sure' || caseData.dangerNearby === 'Yes';
   const isClosed = caseData.status === 'Resolved' || caseData.status === 'Withdrawn';
 
   const handleStatusChange = (e) => {
@@ -1689,6 +1698,12 @@ const App = () => {
   const { cases, addCase, updateCase, deleteCase } = useCases();
 
   const t = STRINGS[lang];
+
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => { window.scrollTo(0, 0); }, [view]);
 
